@@ -1,0 +1,21 @@
+image_sorter/
+│
+├── .gitignore
+├── pyproject.toml
+├── README.md
+├── requirements.txt
+├── main.py
+│
+├── assets/
+│   └── images/
+│       ├── 20181104_120057.jpg
+│       └── ...
+│
+└── src/
+    ├── __init__.py
+    └── utils/
+        ├── __init__.py
+        ├── convert_coord_to_decimal_number.py
+        ├── get_image_gps_details.py 
+        ├── get_location_from_gps.py
+        └── sort_images.py (New file)
