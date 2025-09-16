@@ -8,7 +8,7 @@ image_sorter/
 │
 ├── assets/
 │   └── images/
-│       ├── 20181104_120057.jpg
+│       ├── example.jpg
 │       └── ...
 │
 └── src/

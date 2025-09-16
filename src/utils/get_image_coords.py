@@ -5,7 +5,7 @@ def get_image_coords(image_dir):
     """
         Reads the GPS information from all images in the image directory and returns a dictionary.
         The dictionary has the filename as the key and the value is another dictionary containing the GPS information.
-        The GPS information dictionary contains the latitude, longitude and altitude of the image.
+        The GPS information dictionary contains the latitude, longitude, and altitude of the image.
         If there is no GPS information found for an image, a message will be printed.
         If there is an error reading the image, a message will be printed.
 
@@ -28,18 +28,26 @@ def get_image_coords(image_dir):
                     longitude = gps_info.get(piexif.GPSIFD.GPSLongitude, None)
                     altitude = gps_info.get(piexif.GPSIFD.GPSAltitude, None)
                     
+                    # Retrieve cardinal direction references
+                    latitude_ref = gps_info.get(piexif.GPSIFD.GPSLatitudeRef, None)
+                    longitude_ref = gps_info.get(piexif.GPSIFD.GPSLongitudeRef, None)
+
                     if latitude and longitude:
                         coords[filename] = {
                             'latitude': latitude,
                             'longitude': longitude,
                             'altitude': altitude,
+                            'latitude_ref': latitude_ref,
+                            'longitude_ref': longitude_ref
                         }
                     else:
                         print(f"No GPS information found in image {filename}")
                         coords[filename] = {
-                            'latitude': "unknown",
-                            'longitude': "unknown",
-                            'altitude': "unknown",
+                            'latitude': None,
+                            'longitude': None,
+                            'altitude': None,
+                            'latitude_ref': None,
+                            'longitude_ref': None
                         }
             except Exception as e:
                 print(f"Error reading image {filename}: {e}")
