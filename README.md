@@ -23,5 +23,5 @@ As a User, I need a simple tool that scans a designated folder, extracts the loc
 Idea:
     Store image metadata in a postgres db and use it to track my travels.
 
- ![alt text](image.png)
+ ![alt text](assets/diagrams/class_diagram.png)
  
