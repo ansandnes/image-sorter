@@ -20,8 +20,7 @@ As a User, I need a simple tool that scans a designated folder, extracts the loc
     **4. Idempotent Operation:** The system must be able to re-scan the folder without reprocessing or moving images that have already been classified and organized.
 
 
-Idea:
-    Store image metadata in a postgres db and use it to track my travels.
+### Class Diagram
 
- ![alt text](assets/diagrams/class_diagram.png)
+![alt text](assets/diagrams/class_diagram.png)
  
