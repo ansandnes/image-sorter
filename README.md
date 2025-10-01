@@ -1,7 +1,7 @@
 # image-sorter
 
 📷 Image Sorter & Organizer
-Project Overview (Prosjektoversikt)
+Project Overview
 This project provides an automated solution for managing and organizing large, unsorted collections of digital images. Leveraging the EXIF metadata embedded in modern photographs, the system intelligently sorts images into a logical folder hierarchy based on when and where the picture was taken.
 
 The goal is to transition your chaotic image archive into an easily navigable structure, eliminating the time spent manually filing photos.
