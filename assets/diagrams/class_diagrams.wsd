@@ -21,19 +21,20 @@ class ImageGPS {
     +get_coords()
 }
 
-class Geocoder {
+class Location {
+    +location_id : int <<PK>>
     +country : str
     +city : str
+}
+
+class GeocoderService {
     --
     +get_location(coords : ImageGPS) : (country: str, city: str)
 }
 
 class ImageMetadata {
     -image_id : int <<PK>>
-    -timestamp : ImageTimestamp
-    -path : ImagePath
-    -coords : ImageGPS
-    +location : Geocoder
+    +coords : ImageGPS
     --
     +set_metadata()
 }
@@ -46,31 +47,30 @@ class ImageOrganizer {
     +update_path()
 }
 
-' Add a database
-class ImageDB {
-    -db_connection : Connection
-    --
-    +store_metadata(metadata : ImageMetadata)
-    +load_metadata(image_id : int) : ImageMetadata
-}
+' ' Add a database
+' class ImageDB {
+'     -db_connection : Connection
+'     --
+'     +store_metadata(metadata : ImageMetadata)
+'     +load_metadata(image_id : int) : ImageMetadata
+' }
 
 ' --- RELATIONSHIPS ---
 
 ' ImageMetadata is composed of the data components
-ImageMetadata "1" *-- "1" ImageTimestamp
-ImageMetadata "1" *-- "1" ImagePath
-ImageMetadata "1" *-- "1" ImageGPS
+ImageMetadata "1" *-- "1" ImageTimestamp : has
+ImageMetadata "1" *-- "1" ImagePath : has
+ImageMetadata "1" *-- "1" ImageGPS : has
+ImageMetadata "1" *-- "1" Location : has
 
-' ImageMetadata uses the Geocoder to get location data
-ImageMetadata "1" ..> "1" Geocoder : uses
+' ImageMetadata uses the GeocoderService to get location data
+ImageMetadata "1" ..> "1" GeocoderService : uses for Location
 
 ' ImageOrganizer manages a collection of ImageMetadata
-ImageOrganizer "1" --> "*" ImageMetadata : manages
+ImageOrganizer "1" o--> "*" ImageMetadata : manages
 
-' ImageOrganizer uses the Geocoder service and the DB service
-ImageOrganizer "1" --> "1" Geocoder : uses service
-ImageOrganizer "1" --> "1" ImageDB : uses persistence
-
+' ' ImageOrganizer uses the GeocoderService service and the DB service
+' ImageOrganizer "1" --> "1" ImageDB : uses persistence
 
 
 @enduml

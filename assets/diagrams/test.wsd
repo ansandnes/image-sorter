@@ -1,59 +1,57 @@
-@startuml Image-Sorter-Refined
+@startuml Image-Sorter_Final_Model
 
-' The data components
+' --- ENTITY CLASSES (Data) ---
+
 class ImageTimestamp {
-    +timestamp : date
+  +timestamp : date
 }
 
 class ImagePath {
-    +path : str
+  +path : str
 }
 
 class ImageGPS {
-    +latitude : tuple
-    +latitude_ref : str
-    +longitude : tuple
-    +longitude_ref : str
-    --
-    +get_coords()
+  +latitude : tuple
+  +longitude : tuple
 }
 
-' The service class (utility)
-class Geocoder {
-    --
-    +get_location(gps: ImageGPS) : (country: str, city: str)
+class Location {
+  +location_id : int <<PK>>
+  +country : str
+  +city : str
 }
 
-' The core object
 class ImageMetadata {
-    -image_id : int <<PK>>
-    +timestamp_data : ImageTimestamp
-    +path_data : ImagePath
-    +gps_data : ImageGPS
-    +country : str
-    +city : str
-    --
-    +set_metadata()
-    +add_location(country: str, city: str)
+  -image_id : int <<PK>>
+  --
+  +set_metadata()
 }
 
-' The manager/coordinator
+' --- SERVICE CLASSES (Logic) ---
+
+class GeocoderService {
+  +get_location(coords : ImageGPS) : Location
+}
+
 class ImageOrganizer {
-    -geocoder : Geocoder
-    --
-    +organize_by_location(images: list<ImageMetadata>)
-    +sort_by_timestamp(images: list<ImageMetadata>)
-    +update_path(metadata: ImageMetadata)
+  +organize_by_location()
+  +sort_by_timestamp()
+  +update_path()
 }
 
-' RELATIONSHIPS
-' ImageMetadata is composed of the data classes
+' --- RELATIONSHIPS ---
+
+' Composition: ImageMetadata owns the essential, dependent data.
 ImageMetadata "1" *-- "1" ImageTimestamp
 ImageMetadata "1" *-- "1" ImagePath
 ImageMetadata "1" *-- "1" ImageGPS
+ImageMetadata "1" *-- "1" Location
 
-' ImageOrganizer uses both the core object and the service
-ImageOrganizer "1" --> "1..*" ImageMetadata : manages
-ImageOrganizer "1" --> "1" Geocoder : uses service
+' Dependency CORRECTION: ImageMetadata's logic requires the Geocoder service.
+' The Location entity is passive and should not call the service.
+ImageMetadata ..> GeocoderService : uses for Location
+
+' Aggregation: The organizer manages a collection of metadata objects.
+ImageOrganizer "1" o--> "*" ImageMetadata : manages
 
 @enduml
