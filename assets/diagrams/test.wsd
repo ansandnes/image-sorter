@@ -1,0 +1,59 @@
+@startuml Image-Sorter-Refined
+
+' The data components
+class ImageTimestamp {
+    +timestamp : date
+}
+
+class ImagePath {
+    +path : str
+}
+
+class ImageGPS {
+    +latitude : tuple
+    +latitude_ref : str
+    +longitude : tuple
+    +longitude_ref : str
+    --
+    +get_coords()
+}
+
+' The service class (utility)
+class Geocoder {
+    --
+    +get_location(gps: ImageGPS) : (country: str, city: str)
+}
+
+' The core object
+class ImageMetadata {
+    -image_id : int <<PK>>
+    +timestamp_data : ImageTimestamp
+    +path_data : ImagePath
+    +gps_data : ImageGPS
+    +country : str
+    +city : str
+    --
+    +set_metadata()
+    +add_location(country: str, city: str)
+}
+
+' The manager/coordinator
+class ImageOrganizer {
+    -geocoder : Geocoder
+    --
+    +organize_by_location(images: list<ImageMetadata>)
+    +sort_by_timestamp(images: list<ImageMetadata>)
+    +update_path(metadata: ImageMetadata)
+}
+
+' RELATIONSHIPS
+' ImageMetadata is composed of the data classes
+ImageMetadata "1" *-- "1" ImageTimestamp
+ImageMetadata "1" *-- "1" ImagePath
+ImageMetadata "1" *-- "1" ImageGPS
+
+' ImageOrganizer uses both the core object and the service
+ImageOrganizer "1" --> "1..*" ImageMetadata : manages
+ImageOrganizer "1" --> "1" Geocoder : uses service
+
+@enduml

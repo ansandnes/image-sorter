@@ -1,0 +1,41 @@
+@startuml Image-Sorter
+
+class ImageMetadata {
+    -image_id : int <<PK>>
+    -path : str
+    +timestamp : date
+    +latitude : tuple
+    +latitude_ref : str
+    +longitude : tuple
+    +longitude_ref : str
+    +altitude : tuple
+    --
+    +get_metadata()
+    +add_location()
+}
+
+class Geocoder {
+    +latitude : tuple
+    +latitude_ref : str
+    +longitude : tuple
+    +longitude_ref : str
+    +country : str
+    +city : str
+    --
+    +get_location()
+}
+
+class Organizer {
+    +image_metadata : ImageMetadata
+    +location : Geocoder
+    --
+    +organize_by_location()
+    +organize_by_timestamp()
+    +update_path()
+}
+
+
+
+@enduml
+
+

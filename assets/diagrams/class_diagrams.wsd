@@ -1,0 +1,78 @@
+@startuml Image-Sorter
+
+class ImageTimestamp {
+    +timestamp : date
+    --
+    +get_timestamp()
+}
+
+class ImagePath {
+    +path : str
+    --
+    +get_path()
+}
+
+class ImageGPS {
+    +latitude : tuple
+    +latitude_ref : str
+    +longitude : tuple
+    +longitude_ref : str
+    --
+    +get_coords()
+}
+
+class Geocoder {
+    +country : str
+    +city : str
+    --
+    +get_location(coords : ImageGPS) : (country: str, city: str)
+}
+
+class ImageMetadata {
+    -image_id : int <<PK>>
+    -timestamp : ImageTimestamp
+    -path : ImagePath
+    -coords : ImageGPS
+    +location : Geocoder
+    --
+    +set_metadata()
+}
+
+class ImageOrganizer {
+    +image_metadata : ImageMetadata
+    --
+    +organize_by_location()
+    +sort_by_timestamp()
+    +update_path()
+}
+
+' Add a database
+class ImageDB {
+    -db_connection : Connection
+    --
+    +store_metadata(metadata : ImageMetadata)
+    +load_metadata(image_id : int) : ImageMetadata
+}
+
+' --- RELATIONSHIPS ---
+
+' ImageMetadata is composed of the data components
+ImageMetadata "1" *-- "1" ImageTimestamp
+ImageMetadata "1" *-- "1" ImagePath
+ImageMetadata "1" *-- "1" ImageGPS
+
+' ImageMetadata uses the Geocoder to get location data
+ImageMetadata "1" ..> "1" Geocoder : uses
+
+' ImageOrganizer manages a collection of ImageMetadata
+ImageOrganizer "1" --> "*" ImageMetadata : manages
+
+' ImageOrganizer uses the Geocoder service and the DB service
+ImageOrganizer "1" --> "1" Geocoder : uses service
+ImageOrganizer "1" --> "1" ImageDB : uses persistence
+
+
+
+@enduml
+
+
