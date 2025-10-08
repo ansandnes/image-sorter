@@ -1,14 +1,13 @@
 from geopy.geocoders import Nominatim
-import json
 from geopy.extra.rate_limiter import RateLimiter
 
-def get_location_from_gps(lat:float, lon:float) -> dict:
+def get_location_from_gps(lat, lon) -> dict:
     """
         Get the location from a GPS coordinate.
 
         Args:
-            lat (float): The latitude of the GPS coordinate.
-            lon (float): The longitude of the GPS coordinate.
+            lat: The latitude of the GPS coordinate.
+            lon: The longitude of the GPS coordinate.
 
         Returns:
             dict: A dictionary containing the location details.

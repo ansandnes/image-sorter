@@ -1,5 +1,11 @@
+# Standard Library imports
 import piexif
 import os
+
+# Module imports
+from src.utils.classes.ImageGPS import ImageGPS
+from src.utils.set_logger import set_logger
+
 
 def get_image_coords(image_dir):
     """
@@ -11,7 +17,12 @@ def get_image_coords(image_dir):
 
         Following this documentation: https://piexif.readthedocs.io/en/latest/functions.html
     """
-    coords = {}
+
+    # Initialize logger
+    main_logger = set_logger(name="main", logfilename="main.log", log_path=image_dir, mode="a")
+    
+
+    coords = []
     
     for filename in os.listdir(image_dir):
         if filename.lower().endswith((".jpg", ".jpeg", ".webp", ".tiff", ".tif")):
@@ -26,29 +37,30 @@ def get_image_coords(image_dir):
                     # Get the GPS information using the piexif library constants for the GPS tags
                     latitude = gps_info.get(piexif.GPSIFD.GPSLatitude, None)
                     longitude = gps_info.get(piexif.GPSIFD.GPSLongitude, None)
-                    altitude = gps_info.get(piexif.GPSIFD.GPSAltitude, None)
                     
                     # Retrieve cardinal direction references
                     latitude_ref = gps_info.get(piexif.GPSIFD.GPSLatitudeRef, None)
                     longitude_ref = gps_info.get(piexif.GPSIFD.GPSLongitudeRef, None)
 
                     if latitude and longitude:
-                        coords[filename] = {
-                            'latitude': latitude,
-                            'longitude': longitude,
-                            'altitude': altitude,
-                            'latitude_ref': latitude_ref,
-                            'longitude_ref': longitude_ref
-                        }
+                        # Create an instance of the ImageGPS class
+                        coords.append(
+                            {
+                                filename: ImageGPS(
+                                    latitude=latitude,
+                                    latitude_ref=latitude_ref,
+                                    longitude=longitude,
+                                    longitude_ref=longitude_ref
+                                )
+                            }
+                        )
                     else:
-                        print(f"No GPS information found in image {filename}")
-                        coords[filename] = {
-                            'latitude': None,
-                            'longitude': None,
-                            'altitude': None,
-                            'latitude_ref': None,
-                            'longitude_ref': None
-                        }
+                        # Log that no GPS information was found
+                        try:
+                            main_logger.info(f"No GPS information found for {filename}")
+                        except Exception as e:
+                            print(f"Error logging GPS information for {filename}: {e}")
+                            
             except Exception as e:
                 print(f"Error reading image {filename}: {e}")
 
