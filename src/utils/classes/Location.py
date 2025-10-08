@@ -1,9 +1,21 @@
 class Location:
     """  """
-    def __init__(self, location_id, country, city):
+    def __init__(self):
         """  """
-        self.location_id : int = location_id
-        self.country : str = country
-        self.city : str = city
+        self.country = None
+        self.city = None
 
+    def set_location(self, country, city):
+        self.country = country
+        self.city = city
+
+    def get_location(self, country, city):
+        location = {"location": {"country": country, "city": city}}
+        return location
+    
+    def get_country(self):
+        return self.country
+    
+    def get_city(self):
+        return self.city
     

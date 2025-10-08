@@ -5,10 +5,10 @@ class ImageGPS:
         longitude: tuple,
         longitude_ref: str
         ):
-        self.latitude : tuple = latitude
-        self.latitude_ref : str = latitude_ref
-        self.longitude : tuple = longitude
-        self.longitude_ref : str = longitude_ref
+        self.latitude : tuple | None = latitude
+        self.latitude_ref : str | None = latitude_ref
+        self.longitude : tuple | None = longitude
+        self.longitude_ref : str | None = longitude_ref
 
     def get_coords(self) -> dict:
         
@@ -21,19 +21,14 @@ class ImageGPS:
         return coords
 
 
-    def get_longitude(self) -> tuple:
+    def get_longitude(self) -> tuple | None:
         return self.longitude
 
-    def get_latitude(self) -> tuple:
+    def get_latitude(self) -> tuple | None:
         return self.latitude
 
-    def get_longitude_ref(self) -> str:
+    def get_longitude_ref(self) -> str | None:
         return self.longitude_ref
 
-    def get_latitude_ref(self) -> str:
+    def get_latitude_ref(self) -> str | None:
         return self.latitude_ref
-    
-    def set_location(self, location_id, country, city):
-        self.location_id = location_id
-        self.country = country
-        self.city = city

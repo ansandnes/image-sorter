@@ -1,3 +1,4 @@
+# Standard Library Imports
 from pathlib import Path
 
 class ImagePath:

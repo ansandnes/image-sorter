@@ -25,13 +25,17 @@ def main():
     list_of_image_gps_objects = get_image_coords(image_dir)
 
     # Print image GPS coordinates
-    print("\n", "list_of_image_gps_objects:\n", list_of_image_gps_objects, "\n")
+    # print("\n", "list_of_image_gps_objects:\n", list_of_image_gps_objects, "\n")
 
     for image_gps_object in list_of_image_gps_objects:
-        image_metadata = create_image_metadata(image_gps_object)
+        image_metadata = create_image_metadata(image_gps_object, image_dir)
 
         # Print image metadata
-        pprint(image_metadata)
+        print("main_oop:\n", image_metadata, "\n")
+        print("main_oop:\n", image_metadata.get_name(), "\n")
+        print("main_oop:\n", image_metadata.get_coords().get_latitude(), "\n")
+        print("main_oop:\n", image_metadata.get_location().get_country(), "\n")
+        print("main_oop:\n", image_metadata.get_location().get_city(), "\n")
         
 
 
