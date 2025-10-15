@@ -1,8 +1,8 @@
 class ImageGPS:
     def __init__(self,
-        latitude: tuple,
+        latitude: tuple | None,
         latitude_ref: str,
-        longitude: tuple,
+        longitude: tuple | None,
         longitude_ref: str
         ):
         self.latitude : tuple | None = latitude

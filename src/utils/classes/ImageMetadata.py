@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 # Module Imports
-# from src.utils.classes.ImageTimestamp import ImageTimestamp
+from src.utils.classes.ImageTimestamp import ImageTimestamp
 from src.utils.classes.ImageGPS import ImageGPS
 from src.utils.classes.Location import Location
 
@@ -14,7 +14,7 @@ class ImageMetadata:
         """  """
         self.image_dir: str = image_dir
         self.image_name: str | None = None
-        # self.image_timestamp: ImageTimestamp | None = None
+        self.image_timestamp: ImageTimestamp | None = None
         self.image_coords: ImageGPS | None = None
         self.image_location: Location | None = None
 
@@ -23,10 +23,10 @@ class ImageMetadata:
         self.image_name = name
         return self.image_name
     
-    # def set_timestamp(self, timestamp):
-    #     """  """
-    #     self.image_timestamp = timestamp
-    #     return self.image_timestamp
+    def set_timestamp(self, timestamp):
+        """  """
+        self.image_timestamp = timestamp
+        return self.image_timestamp
 
     def set_coords(self, latitude, latitude_ref, longitude, longitude_ref):
         """  """
@@ -42,9 +42,9 @@ class ImageMetadata:
         """  """
         return self.image_name
     
-    # def get_timestamp(self):
-    #     """  """
-    #     return self.image_timestamp
+    def get_timestamp(self):
+        """  """
+        return self.image_timestamp
 
     def get_coords(self):
         """  """

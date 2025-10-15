@@ -1,37 +1,33 @@
 # Module imports
 from src.utils.classes.ImageMetadata import ImageMetadata
-from src.utils.classes.ImagePath import ImagePath
 from src.utils.convert_coord_to_decimal_number import convert_coord_to_decimal_number
 from src.utils.get_location_from_gps import get_location_from_gps
 from src.utils.set_logger import set_logger
 
 def create_image_metadata(dict_object: dict, image_dir: str) -> ImageMetadata:
     """
-        Creates a dictionary of image metadata, including GPS coordinates and location information.
-
-        Args:
-            dict_object (dict): A dictionary containing the image metadata.
-
-        Returns:
-            dict: A dictionary containing the image metadata.
+         
     """
 
     # Initialize logger
     main_logger = set_logger(name="main", log_path=image_dir, logfilename="main.log", mode="a")
 
+    # Create an instance of the ImageMetadata class
     image_metadata = ImageMetadata(image_dir)
-
 
     for key, value in dict_object.items():
         
         # Add image name to metadata
         image_metadata.set_name(key)
 
+        # Set the timestamp
+        image_metadata.set_timestamp(value["timestamp"])
+
         # Get the GPS coordinates
-        longitude = value.get_longitude()
-        longitude_ref = value.get_longitude_ref()
-        latitude = value.get_latitude()
-        latitude_ref = value.get_latitude_ref()
+        longitude = value["gps"].get_longitude()
+        longitude_ref = value["gps"].get_longitude_ref()
+        latitude = value["gps"].get_latitude()
+        latitude_ref = value["gps"].get_latitude_ref()
         
         # Set the GPS coordinates
         image_metadata.set_coords(longitude, longitude_ref, latitude, latitude_ref)

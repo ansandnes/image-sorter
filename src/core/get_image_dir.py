@@ -14,16 +14,17 @@ def get_image_dir(image_dir: str) -> str:
     # Create an instance of the ImagePath class
     image_path = ImagePath(image_dir)
 
+    # Initialize logger
+    main_logger = set_logger(name="main", logfilename="main.log", log_path=image_dir, mode="w")
+
     # Check if the path is valid
     if not ImagePath(image_dir).is_valid():
-        print("Invalid path. Exiting.")
+        # Print error message
+        main_logger.error(f"Invalid image directory: {image_dir}")
         return ""
     
     # Overwrite image_dir by the directory obtained by the ImagePath class
     image_dir = image_path.get_path()
-
-    # Initialize logger
-    main_logger = set_logger(name="main", logfilename="main.log", log_path=image_dir, mode="w")  
 
     # Log the path of the image directory
     main_logger.info(f"Image directory: {image_dir}")
