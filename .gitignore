@@ -208,3 +208,6 @@ __marimo__/
 
 # Ignore image directory
 assets/images/
+
+# Ignore developers journal
+dev_journal.md

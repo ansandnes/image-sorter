@@ -6,7 +6,7 @@ from src.utils.set_logger import set_logger
 from geopy.geocoders import Nominatim
 from geopy.extra.rate_limiter import RateLimiter
 
-def get_location_from_gps(lat, lon, image_dir):
+def get_location_from_gps(lat: float, lon: float , image_dir: str):
     """
         Get the location from a GPS coordinate.
 
@@ -22,38 +22,37 @@ def get_location_from_gps(lat, lon, image_dir):
         Raises:
             Exception: If there is an error finding the location from the GPS coordinates.
     """
-
+    
     # Initialize logger
     main_logger = set_logger(name="main", log_path=image_dir, logfilename="main.log", mode="a")
 
-    # Create a Nominatim geocoder
-    loc = Nominatim(user_agent="GetLoc", timeout=10)
-    
+    # Initialize variables
+    country = None
+    city = None
+
     try:
-        # RateLimiter helps respect the Nominatim usage policy
-        # by adding a delay between requests.
+        # Create a Nominatim geocoder
+        loc = Nominatim(user_agent="GetLoc", timeout=10)
+
+        # RateLimiter helps respect the Nominatim usage policy by adding a delay between requests.
         reverse_geocoder = RateLimiter(loc.reverse, min_delay_seconds=1)
-        
+    
         # Find the location
         locname = reverse_geocoder(f"{lat}, {lon}", language="en")
-        
+
         # Get the country and city
-        address_details = locname.raw.get("address", {})
-        country = address_details.get("country", "Unknown Country")  # Default to "Unknown Country"
-        city = address_details.get("city", address_details.get("town", address_details.get("village", "Unknown City")))  # Default to "Unknown City"
-        
-        # Create a Location object containing the country and city
-        location = Location()
-        location.set_location(country, city)
-
-    except Exception as e:
-        # Create a Location object containing the country and city
-        location = Location()
-        country = "Unknown Country"
-        city = "Unknown City"
-        location.set_location(country, city)
-
-        # Log the error
-        main_logger.error(f"Error in get_location_from_gps.py: Could not find location from GPS coordinates: {e}")
+        address_details = locname.raw.get("address", {})  
     
-    return location
+    except Exception as e:
+        # Log that an error occurred
+        main_logger.error(f"Error creating Nominatim geocoder: {e}")
+
+        # Define address_details as static values
+        address_details = {"country":"country_unknown", "city":"city_unknown"}
+
+    country = address_details.get("country", "country_unknown")  # Defaults to country_unknown
+    city = address_details.get("city", address_details.get("town", address_details.get("village", "city_unknown")))  # Defaults to city_unknown
+    
+
+    # Return a Location object containing the country and city
+    return Location(country, city)

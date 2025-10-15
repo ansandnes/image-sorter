@@ -1,4 +1,4 @@
-def convert_coord_to_decimal_number(coord: tuple, ref: str) -> float:
+def convert_coord_to_decimal_number(coord: tuple, ref: bytes) -> float:
     """
     Converts a GPS coordinate from the raw format returned by the piexif
     library to a single decimal number.
@@ -19,13 +19,9 @@ def convert_coord_to_decimal_number(coord: tuple, ref: str) -> float:
     seconds = coord[2][0] / coord[2][1]
 
     decimal_coord = degrees + minutes / 60 + seconds / 3600
-    
-    # Apply the sign based on the reference
-    # Decode the byte string to a regular string and get the first character
-    if isinstance(ref, bytes):
-        ref = ref.decode('ascii')
-    
-    if ref in ['S', 'W']:
+
+    # Apply the cardinal direction reference
+    if ref.decode() in ['S', 'W']:
         return -decimal_coord
     else:
         return decimal_coord

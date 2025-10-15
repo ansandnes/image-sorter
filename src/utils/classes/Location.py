@@ -1,16 +1,12 @@
 class Location:
     """  """
-    def __init__(self):
+    def __init__(self, country: str, city: str):
         """  """
-        self.country = None
-        self.city = None
+        self.country: str = country
+        self.city: str = city
 
-    def set_location(self, country, city):
-        self.country = country
-        self.city = city
-
-    def get_location(self, country, city):
-        location = {"location": {"country": country, "city": city}}
+    def get_location(self):
+        location: dict = {"location": {"country": self.country, "city": self.city}}
         return location
     
     def get_country(self):
