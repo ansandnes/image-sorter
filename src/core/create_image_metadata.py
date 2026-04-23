@@ -1,4 +1,5 @@
 # Standard Library imports
+import logging
 
 
 # Module imports
@@ -6,7 +7,6 @@ from src.utils.classes.ImageMetadata import ImageMetadata
 from src.utils.classes.ImageGPS import ImageGPS
 from src.utils.convert_coord_to_decimal_number import convert_coord_to_decimal_number
 from src.utils.get_location_from_gps import get_location_from_gps
-from src.utils.set_logger import set_logger
 
 def create_image_metadata(timestamp: str | None, coords: ImageGPS, image_dir: str, filename: str) -> ImageMetadata:
     """
@@ -14,8 +14,7 @@ def create_image_metadata(timestamp: str | None, coords: ImageGPS, image_dir: st
         and sets the coordinates and location of the image.
     """
 
-    # Initialize logger
-    main_logger = set_logger(name="main", log_path=image_dir, logfilename="main.log", mode="a")
+    main_logger = logging.getLogger("main")
 
     # Create an instance of the ImageMetadata class
     image_metadata = ImageMetadata(dir=image_dir, name=filename, timestamp=timestamp, coords=coords)
@@ -52,9 +51,5 @@ def create_image_metadata(timestamp: str | None, coords: ImageGPS, image_dir: st
         except Exception as e:
             # Log the error
             main_logger.error(f"Error: Could not convert GPS coordinates to decimal for {filename}: {e}")
-
-    else:
-        # Log the error
-        main_logger.error(f"Error: Invalid GPS coordinates for {filename}")
 
     return image_metadata

@@ -1,10 +1,10 @@
 # Standard Library imports
 import piexif
 import os
+import logging
 
 # Module imports
 from src.utils.classes.ImageGPS import ImageGPS
-from src.utils.set_logger import set_logger
 
 
 def get_image_coords(image_dir: str, filename: str) -> list:
@@ -18,8 +18,7 @@ def get_image_coords(image_dir: str, filename: str) -> list:
         Following this documentation: https://piexif.readthedocs.io/en/latest/functions.html
     """
 
-    # Initialize logger
-    main_logger = set_logger(name="main", logfilename="main.log", log_path=image_dir, mode="a")
+    main_logger = logging.getLogger("main")
     
     # Initialize variables
     timestamp = None

@@ -1,4 +1,2 @@
-pandas
-numpy
-piexif
 geopy
+piexif

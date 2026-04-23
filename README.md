@@ -1,52 +1,118 @@
 # image-sorter
 
-📷 Image Sorter & Organizer
-Project Overview
-This project provides an solution for managing and organizing large, unsorted collections of digital images. Leveraging the EXIF metadata embedded in modern photographs, the system intelligently sorts images into a logical folder hierarchy based on when and where the picture was taken.
+Image Sorter is a Python CLI tool that reads EXIF metadata from photos and organizes files into a folder hierarchy based on location and date.
 
-The goal is to transition my chaotic image archive into an easily navigable structure, eliminating the time spent manually filing photos.
+## What it does
 
-The Problem This Project Solves
-Today's digital cameras and smartphones embed rich metadata (EXIF data)—including GPS coordinates and precise timestamps—directly into image files. Unfortunately, these files are often dumped into a single, massive folder, making it impossible to quickly find a photo based on a trip or event.
+- Extracts GPS and timestamp metadata from image files.
+- Reverse geocodes coordinates into `country` and `city`.
+- Organizes images into: `Country/City/Year/Month`.
+- Moves files with collision-safe naming (for example, `photo_1.jpg` when needed).
+- Tracks processed files in SQLite by SHA-256 hash for idempotent reruns.
+- Supports a `--dry-run` mode to preview actions without changing files.
+- Supports `--verbose` / `--log-level` for log verbosity control.
 
-This project solves the challenge of filing a large collection of photos by automatically extracting and organizing metadata from the files, creating a logical folder hierarchy based on the location and time of each photo.
+## Current status
 
-Key Features
-Metadata Extraction: Automatically reads and interprets essential EXIF data (timestamp and GPS coordinates) from image files.
+Implemented:
 
-Geotagging & Location Resolution: Uses GPS coordinates to resolve and identify the corresponding country and city.
+- Core EXIF read + geocode + organize flow.
+- Fail-fast input directory validation.
+- Collision-safe move behavior.
+- Idempotency state tracking in `.image_sorter/state.db`.
+- CLI options for image directory override and dry run.
+- Basic unit tests for organization and processing state.
 
-Automated Reorganization: Creates a structured, hierarchical folder system (e.g., Country/City/Year/Month) on your hard drive.
+Planned:
 
-File Relocation: Moves image files into their corresponding, newly created location- and time-based folders, preserving the original file integrity.
+- Persist richer metadata records (Postgres goal for learning).
+- Add broader test coverage for EXIF/geocoding edge cases.
+- Improve geocode caching and retry behavior.
 
-As a User, I need a simple tool that scans a designated folder, extracts the location and time data from images, and automatically sorts them into a hierarchical folder structure based on Time and Location.
+## Configure image directory
 
-The extracted metadata will be stored in a Postgres database. his is simply for learning purposes and not for production use.
+Default image directory is defined in:
 
+- `src/utils/image_dir_path.py`
 
-#### If you clone this repo, edit the image_dir variable in image_dir_path here:
-**src/utils/image_dir_path.py**
+You can override it at runtime with `--image-dir`.
 
+## Usage
 
-### Goals:
+Run with default configured directory:
 
-**1. Metadata Extraction:** Efficiently read and parse EXIF data from every image file, specifically extracting the image path, timestamp, and GPS coordinates.
+```bash
+python main.py
+```
 
-**2. Geocoding:** Convert the raw GPS coordinates (Latitude/Longitude) into a human-readable City and Country/Region name.
+Run with explicit directory:
 
-**3. Classification & Tracking:** Store a persistent record of the image's original location, its extracted data, and its new, intended file path.
+```bash
+python main.py --image-dir "C:/path/to/images"
+```
 
-**4. Idempotent Operation:** The system must be able to re-scan the folder without reprocessing or moving images that have already been classified and organized.
+Preview without moving files or writing processing state:
 
-**5. Database Persistence:** The system must be able to store a persistent record of the image's metadata.
+```bash
+python main.py --dry-run
+```
 
+Use both options together:
 
-### Class Diagram
+```bash
+python main.py --image-dir "C:/path/to/images" --dry-run
+```
 
-![alt text](assets/architecture/diagrams/class_diagram.png)
- 
-### My learning goals for this project
+Run with detailed debug logs:
 
-* Learn Python Object Oriented Programming
-* Learn how to set up a Postgres database
+```bash
+python main.py --verbose
+```
+
+Run with an explicit log level:
+
+```bash
+python main.py --log-level WARNING
+```
+
+## Folder output
+
+Example destination pattern:
+
+```text
+<image_dir>/<country>/<city>/<year>/<month>/<filename>
+```
+
+When metadata is missing, fallback folders are used:
+
+- `country_unknown`
+- `city_unknown`
+- `year_unknown`
+- `month_unknown`
+
+## Architecture diagrams
+
+- Class model: `assets/architecture/diagrams/class_diagram.wsd`
+- Runtime sequence flow: `assets/architecture/diagrams/run_flow.wsd`
+- Rendered class diagram: `assets/architecture/diagrams/class_diagram.png`
+- Rendered run flow diagram: `assets/architecture/diagrams/run_flow.png`
+
+Regenerate diagram PNG files:
+
+```bash
+powershell -ExecutionPolicy Bypass -File scripts/render_diagrams.ps1
+```
+
+## Tests
+
+Run tests:
+
+```bash
+python -m unittest discover -s tests -p "test_*.py"
+```
+
+## Project goals
+
+- Learn Python OOP through a real project.
+- Build an image pipeline with safe reruns.
+- Add database persistence for deeper learning (Postgres).

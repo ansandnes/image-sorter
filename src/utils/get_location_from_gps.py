@@ -1,6 +1,6 @@
 # Module imports
+import logging
 from src.utils.classes.Location import Location
-from src.utils.set_logger import set_logger
 
 # Third party imports
 from geopy.geocoders import Nominatim
@@ -23,8 +23,7 @@ def get_location_from_gps(lat: float, lon: float , image_dir: str):
             Exception: If there is an error finding the location from the GPS coordinates.
     """
     
-    # Initialize logger
-    main_logger = set_logger(name="main", log_path=image_dir, logfilename="main.log", mode="a")
+    main_logger = logging.getLogger("main")
 
     # Initialize variables
     country = None
