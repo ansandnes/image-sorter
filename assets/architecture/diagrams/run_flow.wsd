@@ -1,61 +1,54 @@
 @startuml Image-Sorter-Run-Flow
 
 actor User
+participant "Launcher\n(.bat / .command / .sh)" as Launcher
 participant MainCLI
-participant "ImagePath\n(get_image_dir)" as ImagePath
-participant "Logger\n(set_logger)" as Logger
-participant "ProcessingState\n(SQLite)" as ProcessingState
-participant "Image Reader\n(get_image_coords)" as ImageReader
+participant "Scanner\n(scan_unsorted)" as Scanner
+participant "ExifTool" as ExifTool
 participant "Metadata Service\n(create_image_metadata)" as MetadataService
-participant "Geocoder\n(get_location_from_gps)" as Geocoder
-participant "Organizer\n(organize_images)" as Organizer
+participant "GeoLookup\n(offline GeoNames)" as GeoLookup
+participant "ProcessingState\n(SQLite)" as ProcessingState
+participant "Organizer\n(plan_moves / execute_moves)" as Organizer
 
-User -> MainCLI: run `python main.py [--image-dir] [--dry-run] [--verbose|--log-level]`
-MainCLI -> MainCLI: parse_args()
-MainCLI -> ImagePath: get_image_dir(image_dir)
-ImagePath --> MainCLI: valid path or ""
+User -> Launcher: double-click
+Launcher -> MainCLI: bundled python main.py --root <drive>
+MainCLI -> MainCLI: AppPaths(root).ensure_folders()
+MainCLI -> Scanner: scan_unsorted(Unsorted/)
+Scanner --> MainCLI: media files, other files
 
-alt invalid path
-    MainCLI --> User: print invalid directory and exit
-else valid path
-    MainCLI -> Logger: set_logger(name="main", mode="w", level=...)
-    Logger --> MainCLI: logger
-    MainCLI -> ProcessingState: initialize_processing_state(image_dir)
-    ProcessingState --> MainCLI: db_path
+alt no media files
+    MainCLI --> User: "Nothing to do"
+else media files found
+    MainCLI -> ExifTool: read_tags(files) (batches of 100)
+    ExifTool --> MainCLI: date + GPS tags per file
 
-    loop for each supported image file in image_dir
-        MainCLI -> ProcessingState: compute_file_hash(source_path)
-        ProcessingState --> MainCLI: file_hash
-
-        MainCLI -> ProcessingState: is_hash_processed(db_path, file_hash)
-        ProcessingState --> MainCLI: true/false
-
-        alt already processed
-            MainCLI -> Logger: info("Skipping already processed image")
-        else not processed
-            MainCLI -> ImageReader: get_image_coords(image_dir, filename)
-            ImageReader --> MainCLI: timestamp, coords
-
-            MainCLI -> MetadataService: create_image_metadata(timestamp, coords, ...)
-            MetadataService -> Geocoder: get_location_from_gps(lat, lon, image_dir)
-            Geocoder --> MetadataService: Location(country, city)
-            MetadataService --> MainCLI: ImageMetadata
-
-            MainCLI -> Organizer: organize_images(..., dry_run)
-            Organizer --> MainCLI: destination_path | None
-
-            alt move/plan succeeded and not dry-run
-                MainCLI -> ProcessingState: record_processed_image(db_path, hash, src, dst)
-                ProcessingState --> MainCLI: stored
-            else dry-run
-                MainCLI -> Logger: info("[DRY RUN] Skip DB write")
-            else failed move
-                MainCLI -> Logger: error("Failed to organize image")
-            end
-        end
+    loop for each media file
+        MainCLI -> ProcessingState: compute_file_hash(file)
+        MainCLI -> MetadataService: create_image_metadata(path, tags, geo_lookup)
+        MetadataService -> GeoLookup: lookup(gps)
+        GeoLookup --> MetadataService: Location(country, city, timezone) | None
+        MetadataService -> MetadataService: pick_capture_time(tags, timezone)
+        MetadataService --> MainCLI: ImageMetadata
     end
 
-    MainCLI --> User: print total runtime
+    MainCLI -> Organizer: plan_moves(paths, items, db_path)
+    Organizer -> ProcessingState: get_recorded_destination(hash)
+    Organizer --> MainCLI: list[PlannedMove] (SORTED / UNKNOWN / DUPLICATE)
+    MainCLI --> User: plan summary
+
+    alt --dry-run
+        MainCLI --> User: list planned moves, exit
+    else user answers "y" (or --yes)
+        MainCLI -> Organizer: execute_moves(paths, planned, db_path)
+        Organizer -> ProcessingState: record_processed_image(hash, src, dst)
+        Organizer --> MainCLI: MoveResult
+        MainCLI -> Scanner: remove_empty_folders(Unsorted/)
+        MainCLI --> User: summary (sorted / _Unknown / duplicates / failed)
+    else user cancels
+        MainCLI --> User: "Cancelled"
+    end
 end
+
+Launcher --> User: "Press any key" (window stays open)
 
 @enduml
