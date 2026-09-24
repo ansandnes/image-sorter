@@ -4,15 +4,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
-def _db_path(image_dir: str) -> Path:
-    return Path(image_dir) / ".image_sorter" / "state.db"
-
-
-def initialize_processing_state(image_dir: str) -> str:
+def initialize_processing_state(db_path: Path | str) -> str:
     """
     Ensure state database exists and has required schema.
     """
-    db_path = _db_path(image_dir)
+    db_path = Path(db_path)
     db_path.parent.mkdir(parents=True, exist_ok=True)
 
     with sqlite3.connect(db_path) as connection:
@@ -56,12 +52,20 @@ def is_hash_processed(db_path: str, file_hash: str) -> bool:
     """
     Return True when hash already exists in state database.
     """
+    return get_recorded_destination(db_path, file_hash) is not None
+
+
+def get_recorded_destination(db_path: str, file_hash: str) -> str | None:
+    """
+    Return where a file with this hash was sorted to (relative to the drive root), if anywhere.
+    """
     with sqlite3.connect(db_path) as connection:
         cursor = connection.execute(
-            "SELECT 1 FROM processed_images WHERE file_hash = ? LIMIT 1",
+            "SELECT destination_path FROM processed_images WHERE file_hash = ? LIMIT 1",
             (file_hash,),
         )
-        return cursor.fetchone() is not None
+        row = cursor.fetchone()
+        return row[0] if row else None
 
 
 def record_processed_image(
@@ -69,14 +73,20 @@ def record_processed_image(
 ) -> None:
     """
     Persist processed image state for idempotent reruns.
+    Paths should be relative to the drive root. A file sorted again (because its
+    earlier copy was removed from Sorted) replaces the old record.
     """
     processed_at = datetime.now(timezone.utc).isoformat()
     with sqlite3.connect(db_path) as connection:
         connection.execute(
             """
-            INSERT OR IGNORE INTO processed_images (
+            INSERT INTO processed_images (
                 file_hash, original_path, destination_path, processed_at
             ) VALUES (?, ?, ?, ?)
+            ON CONFLICT(file_hash) DO UPDATE SET
+                original_path = excluded.original_path,
+                destination_path = excluded.destination_path,
+                processed_at = excluded.processed_at
             """,
             (file_hash, original_path, destination_path, processed_at),
         )

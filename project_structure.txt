@@ -1,37 +1,43 @@
 image-sorter/
 │
-├── .gitignore
+├── main.py                         CLI entry point (scan -> read -> plan -> confirm -> move)
 ├── pyproject.toml
+├── requirements.txt                (standard library only)
 ├── README.md
-├── requirements.txt
 │
-├── assets/
-│   └── images/
-│       ├── example.jpg
-│       └── ...
+├── launchers/                      copied to the drive root by build_drive.py
+│   ├── Start-ImageSorter.bat       Windows
+│   ├── Start-ImageSorter.command   macOS
+│   ├── start-image-sorter.sh       Linux (and used by the macOS launcher)
+│   └── HOW-TO-USE.txt
+│
+├── scripts/
+│   ├── build_drive.py              assembles the portable drive in dist/ImageSorter
+│   └── render_diagrams.ps1
 │
 ├── src/
-│   ├── __init__.py
 │   ├── core/
-│   │   ├── __init__.py
-│   │   └── create_image_metadata.py
+│   │   ├── app_paths.py            AppPaths: drive folder layout
+│   │   ├── scan_unsorted.py        find media in Unsorted/, clean empty folders
+│   │   ├── create_image_metadata.py  ExifTool tags -> ImageMetadata
+│   │   ├── organize_images.py      plan_moves / execute_moves
+│   │   └── processing_state.py     SQLite record of sorted files
 │   │
 │   └── utils/
-│       ├── __init__.py
-│       ├── convert_coord_to_decimal_number.py
-│       ├── get_image_coords.py
-│       └── get_location_from_gps.py
+│       ├── classes/
+│       │   ├── GPSCoordinates.py
+│       │   ├── ImageMetadata.py
+│       │   └── Location.py
+│       ├── exiftool.py             ExifTool wrapper
+│       ├── geo_lookup.py           offline reverse geocoding (GeoNames)
+│       ├── timestamps.py           capture-time selection and parsing
+│       ├── naming.py               date-prefixed names, safe folder names
+│       ├── console.py              progress line, y/N prompt
+│       └── set_logger.py
 │
-├── testing/
-│   └── unittest
-│       ├── core/
-│       │    ├── test_create_image_metadata.py
-│       │    └── ...
-│       └── utils/
-│           ├── test_convert_coord_to_decimal_number.py
-│           ├── test_get_image_coords.py
-│           ├── test_get_location_from_gps.py
-│           └── ...
-│  
-└── main.py
-
+├── tests/
+│   ├── fixtures/                   tiny sample JPEG and MOV
+│   ├── helpers.py
+│   └── test_*.py
+│
+└── assets/architecture/            diagrams and architecture notes

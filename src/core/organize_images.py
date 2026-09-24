@@ -1,136 +1,160 @@
 # Standard Library imports
-import os
 import logging
+import shutil
+from enum import Enum
 from pathlib import Path
-from datetime import datetime
+from typing import Callable
 
 # Module imports
+from src.core.app_paths import AppPaths
+from src.core.processing_state import get_recorded_destination, record_processed_image
 from src.utils.classes.ImageMetadata import ImageMetadata
+from src.utils.naming import dated_filename, path_key, safe_folder_name, unique_destination
 
-def _get_unique_destination(destination: Path) -> Path:
-    """
-    Return a non-colliding file path by adding a numeric suffix when needed.
-    """
-    if not destination.exists():
-        return destination
 
-    stem = destination.stem
-    suffix = destination.suffix
-    parent = destination.parent
-    index = 1
+class MoveKind(Enum):
+    SORTED = "sorted"
+    UNKNOWN = "unknown"
+    DUPLICATE = "duplicate"
 
-    while True:
-        candidate = parent / f"{stem}_{index}{suffix}"
-        if not candidate.exists():
-            return candidate
-        index += 1
 
-def _decode_timestamp(timestamp: str | bytes | None) -> str:
-    """
-    Normalize EXIF timestamp input to a string.
-    """
-    if timestamp is None:
-        return ""
-    if isinstance(timestamp, bytes):
-        return timestamp.decode(errors="ignore").strip()
-    return str(timestamp).strip()
+class PlannedMove:
+    """One file and where it will go."""
 
-def _extract_year_month(timestamp: str | bytes | None) -> tuple[str, str]:
-    """
-    Extract year and month from EXIF timestamp.
-    Falls back to unknown placeholders when parsing fails.
-    """
-    timestamp_value = _decode_timestamp(timestamp)
-    if not timestamp_value:
-        return ("year_unknown", "month_unknown")
+    def __init__(
+        self,
+        source: Path,
+        destination: Path,
+        kind: MoveKind,
+        file_hash: str,
+        reason: str = "",
+    ):
+        self.source: Path = source
+        self.destination: Path = destination
+        self.kind: MoveKind = kind
+        self.file_hash: str = file_hash
+        self.reason: str = reason
 
-    supported_formats = (
-        "%Y:%m:%d %H:%M:%S",
-        "%Y-%m-%d %H:%M:%S",
-        "%Y:%m:%d",
-        "%Y-%m-%d",
+    def __repr__(self) -> str:
+        return f"PlannedMove({self.source.name} -> {self.destination}, {self.kind.value})"
+
+
+class MoveResult:
+    """Counts from executing a plan."""
+
+    def __init__(self):
+        self.moved: dict[MoveKind, int] = {kind: 0 for kind in MoveKind}
+        self.failed: list[tuple[Path, str]] = []
+
+
+def target_path(paths: AppPaths, image_metadata: ImageMetadata) -> tuple[Path, MoveKind, str]:
+    """
+    Decide where a file belongs:
+        Sorted/<Year>/<Country>/<City>/<date>_<name>   when date and location are known
+        Sorted/_Unknown/<date>_<name>                  otherwise (date prefix only if known)
+    Returns (destination path, kind, reason for Unknown).
+    """
+    taken_at = image_metadata.get_taken_at()
+    location = image_metadata.get_location()
+    filename = dated_filename(image_metadata.get_name(), taken_at)
+
+    if taken_at is None or location is None:
+        missing = [label for label, value in (("date", taken_at), ("location", location)) if value is None]
+        return paths.unknown / filename, MoveKind.UNKNOWN, "no " + " and no ".join(missing)
+
+    folder = (
+        paths.sorted
+        / f"{taken_at.year:04d}"
+        / safe_folder_name(location.get_country(), "Unknown country")
+        / safe_folder_name(location.get_city(), "Unknown city")
     )
+    return folder / filename, MoveKind.SORTED, ""
 
-    for date_format in supported_formats:
-        try:
-            parsed = datetime.strptime(timestamp_value, date_format)
-            return (f"{parsed.year:04d}", f"{parsed.month:02d}")
-        except ValueError:
-            continue
 
-    return ("year_unknown", "month_unknown")
-
-def organize_images(
-    image_dir: str, image_metadata: ImageMetadata, filename: str, dry_run: bool = False
-) -> str | None:
+def plan_moves(
+    paths: AppPaths,
+    items: list[tuple[ImageMetadata, str]],
+    db_path: str,
+) -> list[PlannedMove]:
     """
-    Organize one image into country/city/year/month folder tree.
-    Returns destination path when move succeeds, otherwise None.
+    Plan a move for every (metadata, file hash) pair without touching any files.
+    A file is a duplicate when an identical file (same hash) is already in Sorted,
+    or appears earlier in this same run.
     """
     main_logger = logging.getLogger("main")
 
-    # Initialize variables
-    image_dir_path = Path(image_dir)
-    country = f"{image_metadata.get_location().get_country()}"
-    city = f"{image_metadata.get_location().get_city()}"
-    year, month = _extract_year_month(image_metadata.get_timestamp())
-    new_folder_country = image_dir_path / country
-    new_folder_city = new_folder_country / city
-    new_folder_year = new_folder_city / year
-    new_folder_month = new_folder_year / month
-    source_path = image_dir_path / filename
-    destination_path = _get_unique_destination(new_folder_month / filename)
+    planned: list[PlannedMove] = []
+    taken: set[str] = set()
+    hashes_in_run: dict[str, Path] = {}
 
-    # Create a new folder based on the country
-    if not new_folder_country.exists():
-        try:
-            os.makedirs(new_folder_country)
+    for image_metadata, file_hash in items:
+        source = image_metadata.get_path()
+        duplicate_of = _find_duplicate(paths, db_path, file_hash, hashes_in_run)
 
-        except Exception as e:
-            main_logger.error(f"Failed to create {new_folder_country}: {e}")
+        if duplicate_of:
+            destination = unique_destination(paths.duplicates / source.name, taken)
+            move = PlannedMove(source, destination, MoveKind.DUPLICATE, file_hash, f"same as {duplicate_of}")
+        else:
+            destination, kind, reason = target_path(paths, image_metadata)
+            destination = unique_destination(destination, taken)
+            move = PlannedMove(source, destination, kind, file_hash, reason)
+            hashes_in_run[file_hash] = destination
 
-    # Create a new folder based on the city
-    if not new_folder_city.exists():
-        try:
-            os.makedirs(new_folder_city)
-        
-        except Exception as e:
-            main_logger.error(f"Failed to create {new_folder_city}: {e}")
+        taken.add(path_key(move.destination))
+        planned.append(move)
+        main_logger.debug(f"Planned {move}")
+
+    return planned
 
 
-    # Create a new folder based on year
-    if not new_folder_year.exists():
-        try:
-            os.makedirs(new_folder_year)
+def _find_duplicate(
+    paths: AppPaths, db_path: str, file_hash: str, hashes_in_run: dict[str, Path]
+) -> str | None:
+    if file_hash in hashes_in_run:
+        return paths.relative(hashes_in_run[file_hash])
 
-        except Exception as e:
-            main_logger.error(f"Failed to create {new_folder_year}: {e}")
-
-    # Create a new folder based on month
-    if not new_folder_month.exists():
-        try:
-            os.makedirs(new_folder_month)
-
-        except Exception as e:
-            main_logger.error(f"Failed to create {new_folder_month}: {e}")
-
-    if dry_run:
-        main_logger.info(f"[DRY RUN] Would move {filename} to {destination_path}")
-        return str(destination_path)
-
-    # Move the image to the new folder
-    if new_folder_month.exists():
-        # Move the image to the new folder
-        try:
-            # Move image without overwriting existing files.
-            os.replace(source_path, destination_path)
-
-            # Log that the image was moved to the new folder
-            main_logger.info(f"Moved {filename} to {destination_path.parent}")
-            return str(destination_path)
-
-        except Exception as e:
-            main_logger.error(f"Failed to move {filename} to {new_folder_month}: {e}")
-            return None
-
+    recorded = get_recorded_destination(db_path, file_hash)
+    # Only a duplicate if the earlier copy is still there; if the user has deleted
+    # or moved it, sort this file again rather than hiding it in Duplicates.
+    if recorded and (paths.root / recorded).exists():
+        return recorded
     return None
+
+
+def execute_moves(
+    paths: AppPaths,
+    planned: list[PlannedMove],
+    db_path: str,
+    progress: Callable[[int, int], None] | None = None,
+) -> MoveResult:
+    """
+    Move the files as planned and record sorted files in the state database.
+    """
+    main_logger = logging.getLogger("main")
+    result = MoveResult()
+
+    for number, move in enumerate(planned, start=1):
+        try:
+            move.destination.parent.mkdir(parents=True, exist_ok=True)
+            # Re-check in case something appeared since planning; never overwrite.
+            destination = unique_destination(move.destination)
+            shutil.move(str(move.source), str(destination))
+            main_logger.info(f"Moved {move.source} -> {destination} ({move.kind.value})")
+
+            if move.kind is not MoveKind.DUPLICATE:
+                record_processed_image(
+                    db_path=db_path,
+                    file_hash=move.file_hash,
+                    original_path=paths.relative(move.source),
+                    destination_path=paths.relative(destination),
+                )
+            result.moved[move.kind] += 1
+
+        except Exception as error:
+            main_logger.error(f"Failed to move {move.source} -> {move.destination}: {error}")
+            result.failed.append((move.source, str(error)))
+
+        if progress:
+            progress(number, len(planned))
+
+    return result

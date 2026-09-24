@@ -1,2 +1,2 @@
-geopy
-piexif
+# No third-party packages needed: the app uses only the Python standard library.
+# ExifTool, portable Python and location data are bundled by scripts/build_drive.py.

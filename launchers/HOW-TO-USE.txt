@@ -1,0 +1,39 @@
+IMAGE SORTER
+============
+
+1. Put photos and videos in the "Unsorted" folder (subfolders are fine).
+
+2. Start the sorter by double-clicking:
+     Windows:  Start-ImageSorter.bat
+     macOS:    Start-ImageSorter.command
+     Linux:    start-image-sorter.sh   (choose "Run in Terminal" if asked)
+
+3. The sorter shows what it plans to do and asks "Move the files now? [y/N]".
+   Type y and press Enter.
+
+Where files go
+--------------
+  Sorted/<Year>/<Country>/<City>/   Files with both a date and a GPS location.
+                                    Names start with the capture time, e.g.
+                                    2024-07-15_09-30-00_IMG_1234.jpg, so they
+                                    list in date order.
+  Sorted/_Unknown/                  Files missing a date and/or a location.
+                                    Move these to the right folder by hand.
+  Duplicates/                       Exact copies of files already in Sorted.
+                                    Check and delete them when convenient.
+
+Files that are not photos or videos stay in Unsorted.
+
+First time on a Mac
+-------------------
+macOS may block the launcher the first time. Right-click
+Start-ImageSorter.command, choose "Open", then "Open" again.
+
+The drive
+---------
+Format the drive as exFAT so Windows, macOS and Linux can all read and write it.
+Do not remove or rename the "app" folder. It holds the program, the location data,
+logs (app/logs) and the record of already-sorted files (app/state).
+
+Location names come from GeoNames (https://www.geonames.org, CC BY 4.0).
+Metadata is read with ExifTool by Phil Harvey (https://exiftool.org).

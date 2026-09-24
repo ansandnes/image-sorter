@@ -1,89 +1,129 @@
+
 @startuml Image-Sorter
 
-class ImagePath {
-    +path : str
+class AppPaths {
+    +root : Path
     --
-    +is_valid() : bool
-    +get_path()
+    +unsorted / sorted / unknown / duplicates : Path
+    +app / exiftool_dir / geodata_dir / state_db : Path
+    +from_repo_location() : AppPaths | None
+    +ensure_folders()
+    +relative(path) : str
 }
 
-class ImageGPS {
-    +latitude : tuple | None
-    +latitude_ref : bytes | None
-    +longitude : tuple | None
-    +longitude_ref : bytes | None
+class GPSCoordinates {
+    +latitude : float
+    +longitude : float
     --
-    +get_coords() : dict
-    +get_latitude()
-    +get_latitude_ref()
-    +get_longitude()
-    +get_longitude_ref()
+    +get_latitude() : float
+    +get_longitude() : float
+    +is_valid() : bool
 }
 
 class Location {
     +country : str
     +city : str
+    +timezone : str | None
     --
-    +get_location() : dict
     +get_country() : str
     +get_city() : str
+    +get_timezone() : str | None
 }
 
 class ImageMetadata {
-    +dir : str | None
-    +name : str | None
-    +timestamp : str | None
-    +coords : ImageGPS
-    +location : Location
+    +path : Path
+    +taken_at : datetime | None
+    +gps : GPSCoordinates | None
+    +location : Location | None
     --
-    +set_coords(longitude, longitude_ref, latitude, latitude_ref)
-    +set_location(location : Location)
-    +get_name()
-    +get_timestamp()
-    +get_coords()
-    +get_location()
+    +set_gps(gps)
+    +set_location(location)
+    +set_taken_at(taken_at)
+    +get_name() : str
+    +is_complete() : bool
+}
+
+class ExifTool {
+    +command : list[str]
+    --
+    +read_tags(files, progress) : dict
+    +version() : str
+}
+
+class GeoLookup {
+    +geodata_dir : Path
+    --
+    +is_available() : bool
+    +load()
+    +lookup(gps) : Location | None
+}
+
+class PlannedMove {
+    +source : Path
+    +destination : Path
+    +kind : MoveKind
+    +file_hash : str
+    +reason : str
+}
+
+enum MoveKind {
+    SORTED
+    UNKNOWN
+    DUPLICATE
 }
 
 class MetadataService <<module>> {
     --
-    +create_image_metadata(timestamp, coords, image_dir, filename) : ImageMetadata
-    +convert_coord_to_decimal_number(coord, ref) : float
-    +get_location_from_gps(lat, lon, image_dir) : Location
+    +create_image_metadata(path, tags, geo_lookup) : ImageMetadata
+    +extract_gps(tags) : GPSCoordinates | None
+    +pick_capture_time(tags, timezone) : datetime | None
 }
 
 class OrganizerService <<module>> {
     --
-    +organize_images(image_dir, image_metadata, filename, dry_run=False) : str | None
+    +target_path(paths, metadata) : (Path, MoveKind, str)
+    +plan_moves(paths, items, db_path) : list[PlannedMove]
+    +execute_moves(paths, planned, db_path, progress) : MoveResult
+}
+
+class ScanService <<module>> {
+    --
+    +scan_unsorted(unsorted_dir) : (media, other)
+    +remove_empty_folders(unsorted_dir)
 }
 
 class ProcessingState <<module>> {
     --
-    +initialize_processing_state(image_dir) : str
+    +initialize_processing_state(db_path) : str
     +compute_file_hash(file_path) : str
-    +is_hash_processed(db_path, file_hash) : bool
-    +record_processed_image(db_path, file_hash, original_path, destination_path)
+    +get_recorded_destination(db_path, file_hash) : str | None
+    +record_processed_image(db_path, hash, original, destination)
 }
 
 class MainCLI <<module>> {
     --
     +parse_args() : argparse.Namespace
-    +main()
+    +main() : int
 }
 
 ' --- RELATIONSHIPS ---
 
-ImageMetadata "1" *-- "1" ImageGPS : has
-ImageMetadata "1" *-- "1" Location : has
+ImageMetadata "1" *-- "0..1" GPSCoordinates : has
+ImageMetadata "1" *-- "0..1" Location : has
+PlannedMove --> MoveKind
 
 MetadataService ..> ImageMetadata : builds
-MetadataService ..> ImageGPS : reads
-MetadataService ..> Location : resolves
+MetadataService ..> GeoLookup : resolves location
+GeoLookup ..> Location : returns
 OrganizerService ..> ImageMetadata : uses
-MainCLI ..> ImagePath : validates input path
+OrganizerService ..> PlannedMove : creates
+OrganizerService ..> ProcessingState : duplicates + records
+OrganizerService ..> AppPaths : folder layout
+MainCLI ..> AppPaths : resolves drive
+MainCLI ..> ScanService : finds files
+MainCLI ..> ExifTool : reads tags
 MainCLI ..> MetadataService : creates metadata
-MainCLI ..> OrganizerService : moves files
-MainCLI ..> ProcessingState : idempotency store
+MainCLI ..> OrganizerService : plans + moves files
 
 @enduml
-
 
